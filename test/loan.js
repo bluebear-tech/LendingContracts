@@ -40,7 +40,26 @@ contract("Loan", async (accounts) => {
   });
 
   it("immediately transfers funds to borrower if fully funded", async () => {
-    console.log("NOT YET IMPLEMENTED");
+    let loanContract = Loan.new();
+    makerValues = { maker: borrower, requestedToken: usdCoin.address, requestedQuantity: toWei(1500) }
+    let makerArguments = ['address', 'address', 'uint']
+
+    let loanRequest = new Order({
+      subContract: loanContract,
+      maker: borrower,
+      makerArguments: makerArguments,
+      makerValues: makerValues,
+      takerArguments: ['address', 'uint']
+    });
+
+    await loanRequest.make();
+    await usdCoin.approve(loanContract.address, toWei(100000), { from: lender });
+
+    await loanRequest.take(lender, { taker: lender, takenQuantity: toWei(1500) })
+
+    let weiBalance = (await usdCoin.balanceOf.call(borrower)).toNumber();
+    let balance = fromWei(weiBalance);
+    assert.equal(1500, balance, "Borrower should have $1,500")
   });
 
   it("does not transfer the funds if the entire loan is not funded yet", async () => {
@@ -48,3 +67,11 @@ contract("Loan", async (accounts) => {
   });
 
 });
+
+function fromWei(amount) {
+  return web3._extend.utils.fromWei(amount);
+}
+
+function toWei(amount) {
+  return web3._extend.utils.toWei(amount);
+}
