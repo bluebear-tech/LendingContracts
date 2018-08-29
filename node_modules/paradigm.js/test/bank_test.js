@@ -19,15 +19,15 @@ describe('Bank', () => {
 
   describe('giveMaxAllowanceFor()', () => {
     it('should set allowance to max uint value', async () => {
-      await bank.giveMaxAllowanceFor(TKA, accounts[0]);
-      (await tka.allowance(accounts[0], bank.address)).should.eq(bank.MAX_UINT.toString());
+      await bank.giveMaxAllowanceFor(TKA, subContract, accounts[0]);
+      (await tka.allowance(accounts[0], subContract)).should.eq(bank.MAX_UINT.toString());
     });
   });
 
   describe('giveAllowanceFor()', () => {
     it('should set allowance to max uint value', async () => {
-      await bank.giveAllowanceFor(TKA, 500, accounts[0]);
-      (await tka.allowance(accounts[0], bank.address)).should.eq('500');
+      await bank.giveAllowanceFor(TKA, subContract, 500, accounts[0]);
+      (await tka.allowance(accounts[0], subContract)).should.eq('500');
     });
   });
 
@@ -58,15 +58,4 @@ describe('Bank', () => {
       signedTransfer.signature.should.contain.keys('v', 'r', 's')
     });
   });
-
-  describe('checkAddress()', () => {
-    it('should set the bank address from the orderGateway', async () => {
-      const expectedAddress = await orderGateway.paradigmBank();
-
-      const testBank = new Bank(web3, orderGateway);
-      assert.equal(testBank.address, undefined);
-      await testBank.checkAddress();
-      testBank.address.should.eq(expectedAddress);
-    });
-  })
 });

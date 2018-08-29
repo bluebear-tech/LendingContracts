@@ -1,5 +1,5 @@
 const SimpleERC20 = require('simple-erc20');
-const TokenContractInfo = require('../../lib/contracts/Token');
+const TokenContractInfo = require('paradigm-core-solidity/build/contracts/Token');
 
 module.exports = async (variableName, tokenName, tokenSymbol, from) => {
 

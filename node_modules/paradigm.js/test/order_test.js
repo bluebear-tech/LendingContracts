@@ -1,21 +1,19 @@
 describe('Order', () => {
-  let maker, taker, order, bank, Signature;
+  let maker, taker, order, orderGateway, bank, Signature;
 
   before(async () => {
     bank = paradigm.bank;
     Signature = paradigm.Signature;
     Order = paradigm.Order;
+    orderGateway = paradigm.orderGateway;
 
     maker = accounts[7].toLowerCase();
     taker = accounts[8].toLowerCase();
     let makerArguments = await orderGateway.makerArguments(subContract);
     let takerArguments = await orderGateway.takerArguments(subContract);
 
-    await bank.giveMaxAllowanceFor(TKA, maker);
-    await bank.giveMaxAllowanceFor(TKB, taker);
-
-    const makerTransfer = bank.createTransfer(subContract, TKA, maker, taker, 1000, Date.now());
-    const signedMakerTransfer = await bank.createSignedTransfer(makerTransfer);
+    await bank.giveMaxAllowanceFor(TKA, subContract, maker);
+    await bank.giveMaxAllowanceFor(TKB, subContract, taker);
 
     let makerValues = {
       signer: maker,
@@ -24,7 +22,6 @@ describe('Order', () => {
       buyer: taker,
       buyerToken: TKB,
       buyerTokenCount: 1000,
-      signerTransfer: signedMakerTransfer,
     };
 
     order = new paradigm.Order({ subContract, maker: maker, makerArguments, takerArguments, makerValues });
@@ -33,9 +30,9 @@ describe('Order', () => {
 
   it('should have token balances and allowances setup for the following test', async () => {
     assert.isAbove(parseInt(await tka.balanceOf(maker)), 3000);
-    assert.isAbove(parseInt(await tka.allowance(maker, bank.address)), 3000);
+    assert.isAbove(parseInt(await tka.allowance(maker, subContract)), 3000);
     assert.isAbove(parseInt(await tkb.balanceOf(taker)), 3000);
-    assert.isAbove(parseInt(await tkb.allowance(taker, bank.address)), 3000);
+    assert.isAbove(parseInt(await tkb.allowance(taker, subContract)), 3000);
   });
 
   describe('constructor()', () => {
@@ -75,27 +72,23 @@ describe('Order', () => {
 
   describe('take()', () => {
     it("posts the order to the OrderGateway", async () => {
-      const takerTransfer = bank.createTransfer(subContract, TKB, taker, maker, 1000, Date.now());
-      const signedTakerTransfer = await bank.createSignedTransfer(takerTransfer);
-
       const takerValues = {
-        tokensToBuy: 100,
-        buyerTransfer: signedTakerTransfer
+        tokensToBuy: 100
       };
 
-      await order.take(taker, takerValues);
+      const tx = await order.take(taker, takerValues);
 
       const tka = SimpleERC20(TKA, await web3.eth.net.getId(), web3);
-      assert.equal(await tka.balanceOf(taker), '100')
-      const tkb = SimpleERC20(TKB, await web3.eth.net.getId(), web3)
-      assert.equal(await tkb.balanceOf(maker), '100')
+      assert.equal(await tka.balanceOf(taker), '100', 'TKA');
+      const tkb = SimpleERC20(TKB, await web3.eth.net.getId(), web3);
+      assert.equal(await tkb.balanceOf(maker), '100', 'TKB');
     });
   });
 
   describe('recoverMaker()', () => {
     it('should result in the maker', () => {
       order.recoverMaker().should.eq(maker);
-    })
+    });
 
     it("recovers the maker address from the JSON used to initalize it", () => {
       let json = order.toJSON();

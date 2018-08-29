@@ -11,16 +11,14 @@ class Bank {
     this.MAX_UINT = Web3.utils.toBN('2').pow(Web3.utils.toBN('256')).sub(Web3.utils.toBN('1'));
   }
 
-  async giveMaxAllowanceFor(address, from = null) {
-    await this.checkAddress();
-    const token = SimpleERC20(address, await this.web3.eth.net.getId(), this.web3);
-    await token.approve(this.address, this.MAX_UINT, from);
+  async giveMaxAllowanceFor(token, spender, from = null) {
+    const token_ = SimpleERC20(token, await this.web3.eth.net.getId(), this.web3);
+    await token_.approve(spender, this.MAX_UINT, from);
   }
 
-  async giveAllowanceFor(address, value, from = null) {
-    await this.checkAddress();
-    const token = SimpleERC20(address, await this.web3.eth.net.getId(), this.web3);
-    await token.approve(this.address, value, from);
+  async giveAllowanceFor(token, spender, value, from = null) {
+    const token_ = SimpleERC20(token, await this.web3.eth.net.getId(), this.web3);
+    await token_.approve(spender, value, from);
   }
 
   async createSignedTransfer(transfer) {
@@ -34,12 +32,6 @@ class Bank {
   createTransfer(transferer, tokenAddress, tokenHolder, recipient, maxAmount, nonce) {
     if(recipient === null) recipient = utils.NULL_ADDRESS;
     return { transferer, tokenAddress, tokenHolder, recipient, maxAmount, nonce } //TODO: perhaps here would be a good place to generate a nonce?
-  }
-
-  async checkAddress() {
-    if(!this.address) {
-      this.address = await this.orderGateway.paradigmBank();
-    }
   }
 };
 

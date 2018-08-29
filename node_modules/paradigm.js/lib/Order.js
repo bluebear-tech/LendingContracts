@@ -28,7 +28,7 @@ class Order {
   }
 
   async take(taker, takerValues) {
-    this.checkDataTypes();
+    await this.checkDataTypes();
     const makerValuesBytes = this.serialize(this.makerArguments, this.makerValues);
     const takerValuesBytes = this.serialize(this.takerArguments, takerValues);
     return await this.orderGateway.participate(this.subContract, makerValuesBytes, takerValuesBytes, taker)

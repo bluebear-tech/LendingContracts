@@ -22,6 +22,7 @@
   "homepage": "https://github.com/bluebear-tech/LendingContracts#readme",
   "dependencies": {
     "openzeppelin-solidity": "1.12.0",
-    "paradigm.js": "^0.1.7"
+    "paradigm-solidity": "0.0.1",
+    "paradigm.js": "^0.1.10"
   }
 }
