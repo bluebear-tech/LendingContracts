@@ -11,7 +11,7 @@ contract("Loan", async (accounts) => {
     // Give the lender some money to lend
     usdCoin  = await Token.new("United Stated Dollar Coin", 'USDC', { from: lender });
     gateway  = await OrderGateway.deployed();
-    paradigm = new Paradigm({ provider: web3.currentProvider, networkId: 50, orderGatewayAddress: gateway.address });
+    paradigm = new Paradigm({ provider: web3.currentProvider, networkId: 50 });
     Order    = paradigm.Order;
     loanContract = await Loan.new(
       '[{"dataType":"address","name":"maker"}, {"dataType":"address","name":"requestedToken"}, {"dataType":"uint","name":"requestedQuantity"}]',
