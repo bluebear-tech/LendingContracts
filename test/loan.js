@@ -80,6 +80,28 @@ contract("Loan", async (accounts) => {
     assert.equal(0, balance, "Borrower should have $0")
   });
 
+  it("keeps track of partial loans (but doesn't transfer until fully funded)", async () => {
+    let makerValues = { maker: borrower, requestedToken: usdCoin.address, requestedQuantity: toWei(1500) }
+    let makerArguments = ['address', 'address', 'uint'];
+
+    let loanRequest = new Order({
+      subContract: loanContract.address,
+      maker: borrower,
+      makerValues: makerValues
+    });
+
+    await loanRequest.make();
+    await usdCoin.approve(loanContract.address, toWei(100000), { from: lender });
+
+    await loanRequest.take(lender, { taker: lender, takenQuantity: toWei(1200) });
+
+    // NOTE: We can use the function this will implement as a way to verify that
+    //       the lender has enough funds to cover all loans they are trying to fill.
+    let weiPending = (await loanContract.totalPending.call(usdCoin, lender)).toNumber();
+    let pending = fromWei(weiPending);
+    assert.equal(1200, pending, "Lender should have $1,200 pending.")
+  });
+
 });
 
 function fromWei(amount) {

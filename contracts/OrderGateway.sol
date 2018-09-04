@@ -13,11 +13,11 @@ contract OrderGateway {
         return SubContract(subContract).participate(makerData, takerData);
     }
 
-    function makerDataTypes(address subContract) public view returns (string) {
-        return SubContract(subContract).makerDataTypes();
+    function makerArguments(address subContract) public view returns (string) {
+        return SubContract(subContract).makerArguments();
     }
 
-    function takerDataTypes(address subContract) public view returns (string) {
-        return SubContract(subContract).takerDataTypes();
+    function takerArguments(address subContract) public view returns (string) {
+        return SubContract(subContract).takerArguments();
     }
 }
