@@ -80,6 +80,47 @@ contract("Loan", async (accounts) => {
     assert.equal(0, balance, "Borrower should have $0")
   });
 
+  it("does transfer the amount requested if more is given", async () => {
+    let makerValues = { maker: borrower, requestedToken: usdCoin.address, requestedQuantity: toWei(1500) }
+    let makerArguments = ['address', 'address', 'uint']
+
+    let loanRequest = new Order({
+      subContract: loanContract.address,
+      maker: borrower,
+      makerValues: makerValues
+    });
+
+    await loanRequest.make();
+    await usdCoin.approve(loanContract.address, toWei(100000), { from: lender });
+
+    await loanRequest.take(lender, { taker: lender, takenQuantity: toWei(1800) });
+
+    let weiBalance = (await usdCoin.balanceOf.call(borrower)).toNumber();
+    let balance = Number(fromWei(weiBalance));
+    assert.equal(balance, 1500, "Borrower should have no more than the loan request amount" )
+  });
+
+
+  it("does not transfer more funds than the borrower requested", async () => {
+    let makerValues = { maker: borrower, requestedToken: usdCoin.address, requestedQuantity: toWei(1500) }
+    let makerArguments = ['address', 'address', 'uint']
+
+    let loanRequest = new Order({
+      subContract: loanContract.address,
+      maker: borrower,
+      makerValues: makerValues
+    });
+
+    await loanRequest.make();
+    await usdCoin.approve(loanContract.address, toWei(100000), { from: lender });
+
+    await loanRequest.take(lender, { taker: lender, takenQuantity: toWei(1800) });
+
+    let weiBalance = (await usdCoin.balanceOf.call(borrower)).toNumber();
+    let balance = Number(fromWei(weiBalance));
+    assert.isAtMost(balance, 1500, "Borrower should have no more than the loan request amount" )
+  });
+
 });
 
 function fromWei(amount) {
