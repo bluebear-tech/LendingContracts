@@ -97,9 +97,8 @@ contract("Loan", async (accounts) => {
 
     let weiBalance = (await usdCoin.balanceOf.call(borrower)).toNumber();
     let balance = Number(fromWei(weiBalance));
-    assert.equal(balance, 1500, "Borrower should have no more than the loan request amount" )
+    assert.equal(balance, 1500, "Borrower should have the amount requested even if more is given" )
   });
-
 
   it("does not transfer more funds than the borrower requested", async () => {
     let makerValues = { maker: borrower, requestedToken: usdCoin.address, requestedQuantity: toWei(1500) }
@@ -119,6 +118,29 @@ contract("Loan", async (accounts) => {
     let weiBalance = (await usdCoin.balanceOf.call(borrower)).toNumber();
     let balance = Number(fromWei(weiBalance));
     assert.isAtMost(balance, 1500, "Borrower should have no more than the loan request amount" )
+
+  });
+
+  it("keeps track of partial loans (but doesn't transfer until fully funded)", async () => {
+    let makerValues = { maker: borrower, requestedToken: usdCoin.address, requestedQuantity: toWei(1500) }
+    let makerArguments = ['address', 'address', 'uint'];
+
+    let loanRequest = new Order({
+      subContract: loanContract.address,
+      maker: borrower,
+      makerValues: makerValues
+    });
+
+    await loanRequest.make();
+    await usdCoin.approve(loanContract.address, toWei(100000), { from: lender });
+
+    await loanRequest.take(lender, { taker: lender, takenQuantity: toWei(1200) });
+
+    // NOTE: We can use the function this will implement as a way to verify that
+    //       the lender has enough funds to cover all loans they are trying to fill.
+    let weiPending = (await loanContract.totalPending.call(usdCoin, lender)).toNumber();
+    let pending = fromWei(weiPending);
+    assert.equal(1200, pending, "Lender should have $1,200 pending.")
   });
 
 });
