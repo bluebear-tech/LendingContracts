@@ -40,7 +40,7 @@ contract("Loan", async (accounts) => {
     assert.equal(borrower, loanRequest.recoverMaker(), "Maker should be borrower");
   });
 
-  it("immediately transfers funds to borrower if fully funded", async () => {
+  it("immediately transfers funds to borrower if fully funded by one lender", async () => {
     let makerValues = { maker: borrower, requestedToken: usdCoin.address, requestedQuantity: toWei(1500) }
     let makerArguments = ['address', 'address', 'uint']
 
@@ -60,6 +60,30 @@ contract("Loan", async (accounts) => {
     assert.equal(1500, balance, "Borrower should have $1,500")
   });
 
+  it("transfers funds to borrower if fully funded by multiple lenders", async () => {
+    let makerValues = { maker: borrower, requestedToken: usdCoin.address, requestedQuantity: toWei(1500) }
+    let makerArguments = ['address', 'address', 'uint']
+
+    let loanRequest = new Order({
+      subContract: loanContract.address,
+      maker: borrower,
+      makerValues: makerValues
+    });
+
+    await loanRequest.make();
+    await usdCoin.approve(loanContract.address, toWei(100000), { from: lender });
+    await loanRequest.take(lender, { taker: lender, takenQuantity: toWei(700) });
+
+    let lender2 = accounts[7];
+    await usdCoin.transfer(lender2, toWei(10000), { from: lender });
+    await usdCoin.approve(loanContract.address, toWei(10000), { from: lender2 });
+    await loanRequest.take(lender2, { taker: lender2, takenQuantity: toWei(800) });
+
+    let weiBalance = (await usdCoin.balanceOf.call(borrower)).toNumber();
+    let balance = fromWei(weiBalance);
+    assert.equal(1500, balance, "Borrower should have $1,500");
+  });
+
   it("does not transfer the funds if the entire loan is not funded yet", async () => {
     let makerValues = { maker: borrower, requestedToken: usdCoin.address, requestedQuantity: toWei(1500) }
     let makerArguments = ['address', 'address', 'uint'];
@@ -77,12 +101,12 @@ contract("Loan", async (accounts) => {
 
     let weiBalance = (await usdCoin.balanceOf.call(borrower)).toNumber();
     let balance = fromWei(weiBalance);
-    assert.equal(0, balance, "Borrower should have $0")
+    assert.equal(0, balance, "Borrower should have $0");
   });
 
   it("does transfer the amount requested if more is given", async () => {
     let makerValues = { maker: borrower, requestedToken: usdCoin.address, requestedQuantity: toWei(1500) }
-    let makerArguments = ['address', 'address', 'uint']
+    let makerArguments = ['address', 'address', 'uint'];
 
     let loanRequest = new Order({
       subContract: loanContract.address,
@@ -102,7 +126,7 @@ contract("Loan", async (accounts) => {
 
   it("does not transfer more funds than the borrower requested", async () => {
     let makerValues = { maker: borrower, requestedToken: usdCoin.address, requestedQuantity: toWei(1500) }
-    let makerArguments = ['address', 'address', 'uint']
+    let makerArguments = ['address', 'address', 'uint'];
 
     let loanRequest = new Order({
       subContract: loanContract.address,
@@ -138,7 +162,7 @@ contract("Loan", async (accounts) => {
 
     // NOTE: We can use the function this will implement as a way to verify that
     //       the lender has enough funds to cover all loans they are trying to fill.
-    let weiPending = (await loanContract.totalPending.call(usdCoin, lender)).toNumber();
+    let weiPending = (await loanContract.totalPending.call(usdCoin.address, lender)).toNumber();
     let pending = fromWei(weiPending);
     assert.equal(1200, pending, "Lender should have $1,200 pending.")
   });
