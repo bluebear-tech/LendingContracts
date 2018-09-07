@@ -20,7 +20,9 @@ contract Loan is SubContract {
         uint takenQuantity = uint(takerArguments[1]);
 
         if(requestedQuantity == takenQuantity) {
-            requestedToken.transferFrom(taker, maker, takenQuantity);
+          requestedToken.transferFrom(taker, maker, takenQuantity);
+        } else if(takenQuantity > requestedQuantity) {
+          requestedToken.transferFrom(taker, maker, requestedQuantity);
         }
 
         return true;
