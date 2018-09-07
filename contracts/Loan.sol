@@ -14,20 +14,48 @@ contract Loan is SubContract {
         takerArguments = _takerArguments;
     }
 
+    struct Lender {
+      address lenderAddress;
+      uint lentAmount;
+    }
+
+    struct LoanRequest {
+      Lender[] lenders;
+      bool exists;
+    }
+
+    mapping (bytes32 => LoanRequest) loanRequests;
+
     function participate(bytes32[] makerArguments, bytes32[] takerArguments) public returns (bool) {
-//        bytes32 id = identify(makerArguments);
+        bytes32 id = identify(makerArguments);
         address maker = address(makerArguments[0]);
         Token requestedToken = Token(address(makerArguments[1]));
         uint requestedQuantity = uint(makerArguments[2]);
         address taker = address(takerArguments[0]);
         uint takenQuantity = uint(takerArguments[1]);
 
-        if(requestedQuantity == takenQuantity) {
+        if (!loanRequests[id].exists) {
+          loanRequests[id] = LoanRequest({ exists: true, lenders: Lender[] });
+          loanRequests[id].lenders.push(Lender({
+            lenderAddress: taker,
+            lentAmount: takenQuantity
+          }));
+        }
+
+        if (requestedQuantity == takenQuantity) {
           requestedToken.transferFrom(taker, maker, requestedQuantity);
-        } else if(takenQuantity > requestedQuantity) {
+        } else if (takenQuantity > requestedQuantity) {
           requestedToken.transferFrom(taker, maker, requestedQuantity);
-        } else if(takenQuantity < requestedQuantity) {
-            pendingTransfers[address(requestedToken)][taker] = takenQuantity;
+        } else if (takenQuantity < requestedQuantity) {
+          pendingTransfers[address(requestedToken)][taker] = takenQuantity;
+
+
+
+          // newTakenQuantity = requestedQuantity - pendingTransferTotal
+
+          // for all takers do
+            // requestedToken.transferFrom(taker, maker, agreedAmount);
+          // end
         }
 
         return true;
