@@ -21,10 +21,10 @@ contract Loan is SubContract {
 
     struct LoanRequest {
       Lender[] lenders;
-      bool exists;
     }
 
     mapping (bytes32 => LoanRequest) loanRequests;
+    mapping (bytes32 => uint) remainingLoanAmounts;
 
     function participate(bytes32[] makerArguments, bytes32[] takerArguments) public returns (bool) {
         bytes32 id = identify(makerArguments);
@@ -34,28 +34,36 @@ contract Loan is SubContract {
         address taker = address(takerArguments[0]);
         uint takenQuantity = uint(takerArguments[1]);
 
-        if (!loanRequests[id].exists) {
-          loanRequests[id] = LoanRequest({ exists: true, lenders: Lender[] });
-          loanRequests[id].lenders.push(Lender({
-            lenderAddress: taker,
-            lentAmount: takenQuantity
-          }));
-        }
-
-        if (requestedQuantity == takenQuantity) {
-          requestedToken.transferFrom(taker, maker, requestedQuantity);
-        } else if (takenQuantity > requestedQuantity) {
-          requestedToken.transferFrom(taker, maker, requestedQuantity);
+        if (takenQuantity >= requestedQuantity) {
+            requestedToken.transferFrom(taker, maker, requestedQuantity);
         } else if (takenQuantity < requestedQuantity) {
-          pendingTransfers[address(requestedToken)][taker] = takenQuantity;
+            Lender[] lenders = loanRequests[id].lenders;
 
+            if (lenders.length == 0) {
+                lenders.push(Lender({
+                    lenderAddress : taker,
+                    lentAmount : takenQuantity
+                }));
 
+                pendingTransfers[address(requestedToken)][taker] = takenQuantity;
 
-          // newTakenQuantity = requestedQuantity - pendingTransferTotal
+                // TODO: TEST WITH 3+ LENDERS
+                // TODO: TEST MULTIPLE LENDERS DOESN'T EXCEED AMOUNT
+                // TODO: TEST EXPIRATION IS TAKEN INTO ACCOUNT FOR PENDING AMOUNTS
+                // TODO: HANDLE EXPIRATIONS
+                remainingLoanAmounts[id] = requestedQuantity - takenQuantity;
+            } else {
+                lenders.push(Lender({
+                    lenderAddress : taker,
+                    lentAmount : takenQuantity
+                }));
 
-          // for all takers do
-            // requestedToken.transferFrom(taker, maker, agreedAmount);
-          // end
+                if((remainingLoanAmounts[id] - takenQuantity) == 0) {
+                    for(uint i = 0; i < lenders.length; i++) {
+                        requestedToken.transferFrom(lenders[i].lenderAddress, maker, lenders[i].lentAmount);
+                    }
+                }
+            }
         }
 
         return true;
