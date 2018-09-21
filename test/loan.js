@@ -109,7 +109,7 @@ contract("Loan", async (accounts) => {
     assert.equal(1500, balance, "Borrower should have $1,500");
 
     let lenderOneBalance = fromWei((await usdCoin.balanceOf.call(lender)).toNumber());
-    assert.equal(9400, lenderOneBalance, "Lender should have $9,400 left");
+    assert.equal(79400, lenderOneBalance, "Lender should have $79,400 left");
     let lenderTwoBalance = fromWei((await usdCoin.balanceOf.call(lender2)).toNumber());
     assert.equal(9400, lenderTwoBalance, "Lender2 should have $9,400 left");
     let lenderThreeBalance = fromWei((await usdCoin.balanceOf.call(lender3)).toNumber());
@@ -184,15 +184,20 @@ contract("Loan", async (accounts) => {
     });
 
     await loanRequest.make();
-    await usdCoin.approve(loanContract.address, toWei(100000), { from: lender });
+    let lender2 = accounts[7];
 
-    await loanRequest.take(lender, { taker: lender, takenQuantity: toWei(8000) });
-    await loanRequest.take(lender, { taker: lender, takenQuantity: toWei(8000) });
+    await usdCoin.transfer(lender2, toWei(10000), { from: lender });
+    await usdCoin.approve(loanContract.address, toWei(10000), { from: lender2 });
+    try {
+      await loanRequest.take(lender2, { taker: lender2, takenQuantity: toWei(8000) });
+      await loanRequest.take(lender2, { taker: lender2, takenQuantity: toWei(8000) });
+    } catch(error) {
+      let borrowerBalance = fromWei((await usdCoin.balanceOf.call(borrower)).toNumber());
+      let lenderPendingBalance = fromWei((await loanContract.totalPending.call(usdCoin.address, lender)).toNumber());
+      assert.equal(borrowerBalance, 0, "Borrower should have no funding yet" )
+      assert.equal(lenderPendingBalance, 8000, "Lender should only have first lent amount pending" )
+    }
 
-    let borrowerBalance = fromWei((await usdCoin.balanceOf.call(borrower)).toNumber());
-    let lenderPendingBalance = fromWei((await loanContract.totalPending.call(usdCoin.address, lender)).toNumber());
-    assert.equal(borrowerBalance, 0, "Borrower should have no funding yet" )
-    assert.equal(lenderPendingBalance, 8000, "Lender should only have first lent amount pending" )
   });
 
   //TODO: CAN WE COMBINE WITH TEST ABOVE?

@@ -24,7 +24,10 @@ contract Loan is SubContract {
     }
 
     mapping (bytes32 => LoanRequest) loanRequests;
-    mapping (bytes32 => uint) remainingLoanAmounts;
+    // TODO: TEST WITH 3+ LENDERS
+    // TODO: TEST MULTIPLE LENDERS DOESN'T EXCEED AMOUNT
+    // TODO: TEST EXPIRATION IS TAKEN INTO ACCOUNT FOR PENDING AMOUNTS
+    // TODO: HANDLE EXPIRATIONS
 
     function participate(bytes32[] makerArguments, bytes32[] takerArguments) public returns (bool) {
         bytes32 id = identify(makerArguments);
@@ -34,38 +37,30 @@ contract Loan is SubContract {
         address taker = address(takerArguments[0]);
         uint takenQuantity = uint(takerArguments[1]);
 
-        if (takenQuantity >= requestedQuantity) {
-            requestedToken.transferFrom(taker, maker, requestedQuantity);
-        } else if (takenQuantity < requestedQuantity) {
-            Lender[] lenders = loanRequests[id].lenders;
+        Lender[] lenders = loanRequests[id].lenders;
 
-            if (lenders.length == 0) {
-                lenders.push(Lender({
-                    lenderAddress : taker,
-                    lentAmount : takenQuantity
-                }));
+        lenders.push(Lender({
+            lenderAddress : taker,
+            lentAmount : takenQuantity
+        }));
 
-                pendingTransfers[address(requestedToken)][taker] = takenQuantity;
+        pendingTransfers[address(requestedToken)][taker] += takenQuantity;
 
-                // TODO: TEST WITH 3+ LENDERS
-                // TODO: TEST MULTIPLE LENDERS DOESN'T EXCEED AMOUNT
-                // TODO: TEST EXPIRATION IS TAKEN INTO ACCOUNT FOR PENDING AMOUNTS
-                // TODO: HANDLE EXPIRATIONS
-                remainingLoanAmounts[id] = requestedQuantity - takenQuantity;
-            } else {
-                lenders.push(Lender({
-                    lenderAddress : taker,
-                    lentAmount : takenQuantity
-                }));
+        // NOTE : Take money from lenders in the first place into the contract. If loan never funded, give it back
+        if(takenQuantitiesFor(id) >= requestedQuantity ) {
 
-                if((remainingLoanAmounts[id] - takenQuantity) == 0) {
-                    for(uint i = 0; i < lenders.length; i++) {
-                        requestedToken.transferFrom(lenders[i].lenderAddress, maker, lenders[i].lentAmount);
-                    }
-                }
+            uint remainingQuantity = requestedQuantity;
+            for(uint i = 0; i < lenders.length; i++) {
+              uint givenAmount = 0;
+              if(lenders[i].lentAmount <= remainingQuantity) {
+                givenAmount = lenders[i].lentAmount;
+              } else {
+                givenAmount = remainingQuantity;
+              }
+              remainingQuantity = remainingQuantity - givenAmount;
+              requestedToken.transferFrom(lenders[i].lenderAddress, maker, givenAmount);
             }
         }
-
         return true;
     }
 
@@ -75,5 +70,14 @@ contract Loan is SubContract {
 
     function identify(bytes32[] makerArguments) private pure returns (bytes32) {
         return keccak256(abi.encodePacked(makerArguments));
+    }
+
+    function takenQuantitiesFor(bytes32 id) public returns(uint) {
+      Lender[] lenders = loanRequests[id].lenders;
+      uint takenQuantities = 0;
+      for(uint i = 0; i < lenders.length; i++) {
+        takenQuantities += lenders[i].lentAmount;
+      }
+      return takenQuantities;
     }
 }
